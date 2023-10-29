@@ -22,9 +22,10 @@ class AchievementControl(QMainWindow):
         super().__init__()
         self.roster = {}
         self.database = Database(DATABASE_PATH)
-        self.docx = WorkingWithWordFiles(self.database)
+        self.docx = CreateWordFile(self.database)
         # Load UI.
         uic.loadUi('UIs/cadet.ui', self)
+        self.setFixedSize(800, 470)
         self.initUI()
 
     def initUI(self):
@@ -200,16 +201,17 @@ class AchievementControl(QMainWindow):
 
 class WorkspaceWindow(QMainWindow):
     def __init__(self, date, aspect, database):
+        super().__init__()
         self.date = date
         self.aspect = aspect
         self.database = database
         self.is_changed = False
-
-        super().__init__()
         if aspect == LEARNING:
             uic.loadUi('UIs/learning_workspace.ui', self)
+            self.setFixedSize(620, 390)
         else:
             uic.loadUi('UIs/workspace.ui', self)
+            self.setFixedSize(880, 700)
             self.initUI()
         self.load_table(self.aspect)
 
@@ -368,7 +370,7 @@ class WorkspaceWindow(QMainWindow):
         self.database.delete_data(id)
         self.load_table(self.aspect)
 
-    def cell_changed(self, item):
+    def cell_changed(self):
         self.is_changed = True
 
     def open_find_window(self):
@@ -400,12 +402,14 @@ class FindWindow(QWidget):
     def __init__(self):
         super().__init__()
         uic.loadUi('UIs/Info.ui', self)
+        self.setFixedSize(460, 380)
 
 
 class Info(QWidget):
     def __init__(self):
         super().__init__()
         uic.loadUi('UIs/Info.ui', self)
+        self.setFixedSize(460, 380)
         self.close_button.clicked.connect(self.close)
 
 
@@ -480,7 +484,7 @@ class Database:
         self.connection.close()
 
 
-class WorkingWithWordFiles:                             # Класс отвечающий за генерацию docx-файла.
+class CreateWordFile:                             # Класс отвечающий за генерацию docx-файла.
     def __init__(self, database):
         self.document = Document()
         self.database = database

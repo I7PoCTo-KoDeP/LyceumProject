@@ -149,18 +149,18 @@ class AchievementControl(QMainWindow):
     def calculate_achievements(self, date, aspect):
         result = 0
         achievements = self.database.get_data('''SELECT
-                                            Aspects.Name as AspectName,
-                                            MainTable.Participants,
-                                            Type.Points,
-                                            MainTable.Date
-                                        FROM
-                                            MainTable
-                                        LEFT JOIN Aspects ON MainTable.AspectId = Aspects.Id
-                                        LEFT JOIN Type ON MainTable.TypeId = Type.Id
-                                        ORDER BY AspectName;''')
+                                              Aspects.Name as AspectName,
+                                              MainTable.Participants,
+                                              Type.Points,
+                                              MainTable.Date
+                                              FROM
+                                              MainTable
+                                              LEFT JOIN Aspects ON MainTable.AspectId = Aspects.Id
+                                              LEFT JOIN Type ON MainTable.TypeId = Type.Id
+                                              ORDER BY AspectName;''')
         for asp, participant, points, dt in achievements:
             if asp == aspect and int(dt[0]) == date:
-                result = len(participant.split(', ')) * points
+                result += len(participant.split(', ')) * points
         if result is None:
             return 0
         return result

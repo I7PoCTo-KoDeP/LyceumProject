@@ -23,12 +23,14 @@ class CreateWordFile:                             # Класс отвечающ�
             edu_sys = ['1 четверть', '2 четверть', '3 четверть', '4 четверть']
         with open('data/settings_file.txt', mode='r', encoding='utf-8') as f:
             number_of_class = f.read().split()[1]
-        self.document.add_heading(f'Достижения {number_of_class}', 0)
+            year = 0
+        self.document.add_heading(f'Достижения {number_of_class} за {year}', 0)
         for i in edu_sys:
             self.document.add_heading(f'Достижения за {i}', 1)
             self.make_grades_table(i)
             self.make_achievement_tables(i)
             self.document.add_page_break()
+        self.document.add_heading(f'Резултаты за {year}', 2)
         self.make_final_table(link_on_table, edu_sys)
         self.document.add_heading(f'Итого: {self.total}', 1)
         self.document.save(f'Достижения_{number_of_class}.docx')

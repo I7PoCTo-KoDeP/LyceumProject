@@ -125,9 +125,9 @@ class AchievementControl(QMainWindow):
         self.tableWidget.resizeColumnsToContents()
 
     def open_workspace(self):
-        self.workspace = workspace.WorkspaceWindow(self.sender().text()[self.sender().text().find(' ') + 1:],
-                                         self.sender().data(), self.database)
-        self.workspace.show()
+        self.w_space = workspace.WorkspaceWindow(self.sender().text()[self.sender().text().find(' ') + 1:],
+                                                 self.sender().data(), self.database)
+        self.w_space.show()
 
     def open_info(self):
         self.info_menu = Info()

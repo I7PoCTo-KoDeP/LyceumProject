@@ -2,20 +2,12 @@ import sys
 import database_script
 import file_generator
 import workspace
+import settings_menu
 from PyQt5 import uic
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QTableWidgetItem, QAction, QWidget, QMenu, QDialog,
                              QListWidgetItem)
-
-ACHIEVEMENT = 1
-LEARNING = 0
-MULTIPLIER = 100
-PER_GOOD_STUDENT = 30
-PER_PERFECT_STUDENT = 50
-DATABASE_PATH = 'data/auto-sys-database.sqlite'
-ACHIEVEMENT_HEADER = ['Вид', 'Тип', 'Уровень', 'Место', 'Описание', 'Участники', 'Очки']
-LEARNING_HEADER = ['Критерии', 'Кол-во', 'Ср.балл, кол-во', 'Очки']
-LEARNING_CRITERIA = ['Ср. Балл по успеваемости', 'Отличники', 'Ударники']
-MAIN_CRITERIA = ['Учёба', 'Внеурочная деятельность', 'Спорт', 'Активная жизненная позиция']
+from constants import *
 
 
 class AchievementControl(QMainWindow):
@@ -24,39 +16,42 @@ class AchievementControl(QMainWindow):
         self.roster = {}
         self.database = database_script.Database(DATABASE_PATH)
         self.docx = file_generator.CreateWordFile(self.database)
-        # Load UI.
+        # Загрузка интерфейсов.
         uic.loadUi('UIs/cadet.ui', self)
+        self.setWindowTitle('Система учёта достижений кадет')
         self.setFixedSize(800, 470)
         self.initUI()
 
     def initUI(self):
+        self.statusbar = self.statusBar()
         menubar = self.menuBar()
-        # Actions.
+        # Действия.
         makefile_action = QAction('&Сгенерировать файл', self)
         makefile_action.triggered.connect(self.create_docx_file)
-        save_action = QAction('&Сохранить', self)
+        settings_action = QAction('&Настройки', self)
+        settings_action.triggered.connect(self.open_settings)
         about_action = QAction('&О программе', self)
         about_action.triggered.connect(self.open_info)
-        # Menus.
+        # Меню.
         file_menu = menubar.addMenu('&Файл')
         workspace_menu = menubar.addMenu('&Открыть таблицу')
         info_menu = menubar.addMenu('&Справка')
-        # Submenus.
+        # Субменю.
         self.learning_menu = QMenu('&Учёба', self)
         self.achievement_menu = QMenu('&Достижения', self)
-        # Fill submenus.
+        # Заполнение субменю.
         self.login()
-        # Another methods.
+        # Другие методы.
         info_menu.addAction(about_action)
-        file_menu.addAction(save_action)
+        file_menu.addAction(settings_action)
         file_menu.addAction(makefile_action)
         workspace_menu.addMenu(self.learning_menu)
         workspace_menu.addMenu(self.achievement_menu)
-        # Initialization methods.
+        # Инициализация.
         self.load_table()
         self.show_best_students()
 
-    def quarters(self):
+    def quarters(self):                                                 # Четвертная система обучения.
         self.n = 4
         for i in range(1, 5):
             learning_action = QAction(f'&Открыть {i} четверть', self)
@@ -68,7 +63,7 @@ class AchievementControl(QMainWindow):
             self.learning_menu.addAction(learning_action)
             self.achievement_menu.addAction(achievement_action)
 
-    def half_year(self):
+    def half_year(self):                                                # Полугодовая система обучения
         self.n = 2
         for i in range(1, 3):
             learning_action = QAction(f'&Открыть {i} полугодие', self)
@@ -80,12 +75,12 @@ class AchievementControl(QMainWindow):
             self.learning_menu.addAction(learning_action)
             self.achievement_menu.addAction(achievement_action)
 
-    def login(self):
-        with open('data/settings_file.txt', mode='r', encoding='utf-8') as f:
-            if int(f.read(2)) >= 10:
-                self.half_year()
-            else:
-                self.quarters()
+    def login(self):                                                    # Выбор системы обучения.
+        data = self.database.send_request('''SELECT Class FROM Other_data''')
+        if data[0][0] >= 10:
+            self.half_year()
+        else:
+            self.quarters()
 
     def load_table(self):
         total = 0
@@ -123,19 +118,23 @@ class AchievementControl(QMainWindow):
         self.tableWidget.setItem(self.tableWidget.rowCount() - 1, 0, QTableWidgetItem('За учебный год'))
         self.tableWidget.setItem(self.tableWidget.rowCount() - 1, 1, QTableWidgetItem(str(int(total))))
         self.tableWidget.resizeColumnsToContents()
+        for i in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(i, 0).text() == 'Спорт':
+                self.paint_table(i, QColor(120, 240, 120))
+            elif self.tableWidget.item(i, 0).text() == 'Учёба':
+                self.paint_table(i, QColor(120, 120, 240))
+            elif self.tableWidget.item(i, 0).text() == 'Внеурочная деятельность':
+                self.paint_table(i, QColor(255, 184, 65))
+            elif self.tableWidget.item(i, 0).text() == 'Активная жизненная позиция':
+                self.paint_table(i, QColor(240, 120, 120))
 
-    def open_workspace(self):
-        self.w_space = workspace.WorkspaceWindow(self.sender().text()[self.sender().text().find(' ') + 1:],
-                                                 self.sender().data(), self.database)
-        self.w_space.show()
+    def paint_table(self, row, color):
+        for i in range(self.tableWidget.columnCount()):
+            self.tableWidget.item(row, i).setBackground(color)
 
-    def open_info(self):
-        self.info_menu = Info()
-        self.info_menu.show()
-
-    def calculate_learning(self, date):
+    def calculate_learning(self, date):                                 # Подсчёт очков обучения.
         result = 0
-        learning = self.database.get_data('''SELECT * FROM Grade''')
+        learning = self.database.send_request('''SELECT * FROM Grade''')
         for avg_score, perf_stud, good_stud, dt in learning:
             if int(dt[0]) == date:
                 n, k = len(perf_stud.split(', ')), len(good_stud.split(', '))
@@ -150,7 +149,7 @@ class AchievementControl(QMainWindow):
 
     def calculate_achievements(self, date, aspect):
         result = 0
-        achievements = self.database.get_data('''SELECT
+        achievements = self.database.send_request('''SELECT
                                               Aspects.Name as AspectName,
                                               MainTable.Participants,
                                               Type.Points,
@@ -168,7 +167,7 @@ class AchievementControl(QMainWindow):
         return result
 
     def show_best_students(self):
-        learning = self.database.get_data('''SELECT * FROM Grade''')
+        learning = self.database.send_request('''SELECT * FROM Grade''')
         for i in learning:
             for j in i[1].split(', '):
                 if j not in self.roster:
@@ -180,7 +179,7 @@ class AchievementControl(QMainWindow):
                     self.roster[j] = PER_GOOD_STUDENT
                 else:
                     self.roster[j] += PER_GOOD_STUDENT
-        achievements = self.database.get_data('''SELECT MainTable.Participants, Type.Points FROM MainTable
+        achievements = self.database.send_request('''SELECT MainTable.Participants, Type.Points FROM MainTable
                                               LEFT JOIN Type ON MainTable.TypeId = Type.Id''')
         for i in achievements:
             for j in i[0].split(', '):
@@ -196,6 +195,22 @@ class AchievementControl(QMainWindow):
     def create_docx_file(self):
         self.docx.docx_file_generator(self.n, self.tableWidget)
 
+    def open_workspace(self):
+        try:
+            self.w_space = workspace.WorkspaceWindow(self.sender().text()[self.sender().text().find(' ') + 1:],
+                                                     self.sender().data(), self.database)
+            self.w_space.show()
+        except BaseException as e:
+            self.statusbar.showMessage(str(e))
+
+    def open_info(self):
+        self.info_menu = Info()
+        self.info_menu.show()
+
+    def open_settings(self):
+        self.settings = settings_menu.SettingsMenu(self.database)
+        self.settings.show()
+
     def closeEvent(self, event):
         self.database.close_connection()
 
@@ -205,33 +220,29 @@ class RegistrationWindow(QDialog):
         super().__init__()
         uic.loadUi('UIs/register.ui', self)
         self.save_button.clicked.connect(self.save)
+        self.setFixedSize(270, 130)
 
     def save(self):
-        with open('data/settings_file.txt', mode='w', encoding='utf-8') as f:
-            f.write(self.class_edit.text() + ' ' + self.platoon_edit.text())
-            self.accept()
-            self.close()
+        database = database_script.Database(DATABASE_PATH)
+        database.send_request('''INSERT INTO Other_data VALUES(?, ?, ?)''',
+                              (self.edu_year_edit.text(), int(self.class_edit.text()), self.platoon_edit.text()))
+        database.confirm_changes()
+        self.accept()
 
 
 class Info(QWidget):
     def __init__(self):
         super().__init__()
         uic.loadUi('UIs/Info.ui', self)
+        self.setWindowTitle('Информация о приложении')
         self.setFixedSize(460, 380)
         self.close_button.clicked.connect(self.close)
 
 
-class SettingsMenu(QWidget):
-    def __init__(self):
-        super().__init__()
-
-
 def registered():
-    try:
-        with open('data/settings_file.txt', mode='r', encoding='utf-8') as f:
-            if f.read(1) == '':
-                return False
-    except FileNotFoundError:
+    database = database_script.Database(DATABASE_PATH)
+    data = database.send_request('''SELECT * FROM Other_data''')
+    if not data or data[0][0] is None:
         return False
     return True
 

@@ -1,7 +1,5 @@
 import sqlite3
-
-ACHIEVEMENT = 1
-LEARNING = 0
+from constants import ACHIEVEMENT
 
 
 class Database:
@@ -32,7 +30,7 @@ class Database:
             return self.cursor.execute('''SELECT AverageScore, PerfectStudents, GoodStudents FROM Grade
                                             WHERE Date = ?''', (date,)).fetchall()
 
-    def get_data(self, request, *args):
+    def send_request(self, request, *args):
         if args:
             return self.cursor.execute(request, *args).fetchall()
         return self.cursor.execute(request).fetchall()

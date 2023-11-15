@@ -6,21 +6,9 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>210</width>
-    <height>105</height>
+    <width>270</width>
+    <height>130</height>
    </rect>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>210</width>
-    <height>105</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>210</width>
-    <height>105</height>
-   </size>
   </property>
   <property name="windowTitle">
    <string>Form</string>
@@ -30,7 +18,7 @@
     <rect>
      <x>90</x>
      <y>40</y>
-     <width>111</width>
+     <width>171</width>
      <height>20</height>
     </rect>
    </property>
@@ -64,8 +52,8 @@
   <widget class="QPushButton" name="save_button">
    <property name="geometry">
     <rect>
-     <x>130</x>
-     <y>70</y>
+     <x>190</x>
+     <y>100</y>
      <width>75</width>
      <height>23</height>
     </rect>
@@ -79,9 +67,32 @@
     <rect>
      <x>90</x>
      <y>10</y>
-     <width>113</width>
+     <width>171</width>
      <height>20</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="edu_year_edit">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>70</y>
+     <width>51</width>
+     <height>21</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_3">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>70</y>
+     <width>201</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Введите учебный год(в формате гг/гг):</string>
    </property>
   </widget>
  </widget>

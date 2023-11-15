@@ -1,13 +1,6 @@
 from docx import Document
-
-
-MULTIPLIER = 100
-PER_GOOD_STUDENT = 30
-PER_PERFECT_STUDENT = 50
-ACHIEVEMENT_HEADER = ['Вид', 'Тип', 'Уровень', 'Место', 'Описание', 'Участники', 'Очки']
-LEARNING_HEADER = ['Критерии', 'Кол-во', 'Ср.балл, кол-во', 'Очки']
-LEARNING_CRITERIA = ['Ср. Балл по успеваемости', 'Отличники', 'Ударники']
-MAIN_CRITERIA = ['Учёба', 'Внеурочная деятельность', 'Спорт', 'Активная жизненная позиция']
+from constants import (LEARNING_HEADER, LEARNING_CRITERIA, MULTIPLIER, PER_PERFECT_STUDENT, PER_GOOD_STUDENT,
+                       ACHIEVEMENT_HEADER)
 
 
 class CreateWordFile:                             # Класс отвечающий за генерацию docx-файла.
@@ -16,28 +9,27 @@ class CreateWordFile:                             # Класс отвечающ�
         self.database = database
         self.total = 0
 
-    def docx_file_generator(self, n, link_on_table):
-        if n == 2:
+    def docx_file_generator(self, n, link_on_table):                    # Основная функция создания docx-файла.
+        if n == 2:                                                      # Выыбор системы обучения.
             edu_sys = ['1 полугодие', '2 полугодие']
         else:
             edu_sys = ['1 четверть', '2 четверть', '3 четверть', '4 четверть']
-        with open('data/settings_file.txt', mode='r', encoding='utf-8') as f:
-            number_of_class = f.read().split()[1]
-            year = 0
-        self.document.add_heading(f'Достижения {number_of_class} за {year}', 0)
+        number_of_class = self.database.send_request('''SELECT Num_of_class FROM Other_data''')[0][0]
+        year = self.database.send_request('''SELECT Date FROM Other_data''')[0][0]
+        self.document.add_heading(f'Достижения {number_of_class} за 20{year}', 0)
         for i in edu_sys:
             self.document.add_heading(f'Достижения за {i}', 1)
-            self.make_grades_table(i)
-            self.make_achievement_tables(i)
-            self.document.add_page_break()
-        self.document.add_heading(f'Резултаты за {year}', 2)
+            self.make_grades_table(i)                                   # Создание таблицы успеваемости.
+            self.make_achievement_tables(i)                             # Создание таблицы достижений.
+            self.document.add_page_break()                              # Разрыв страницы для более удобного чтения.
+        self.document.add_heading(f'Резултаты за {year}', 2)            # Добавление итоговой таблицы.
         self.make_final_table(link_on_table, edu_sys)
         self.document.add_heading(f'Итого: {self.total}', 1)
         self.document.save(f'Достижения_{number_of_class}.docx')
 
-    def make_grades_table(self, date):                  # Создание таблиц успеваемости.
-        total_per_aspect = 0
-        data = self.database.get_data('''SELECT AverageScore, PerfectStudents, GoodStudents 
+    def make_grades_table(self, date):                  # Функция отвечающая за создание таблиц успеваемости.
+        total_per_aspect = 0                            # Все данные берутся из БД и из них формируетяс таблица.
+        data = self.database.send_request('''SELECT AverageScore, PerfectStudents, GoodStudents 
                                       FROM Grade WHERE Date = ?''', (date,))
         self.document.add_heading('Учебная деятельность', 2)
         table = self.document.add_table(rows=1, cols=len(LEARNING_HEADER))
@@ -67,12 +59,12 @@ class CreateWordFile:                             # Класс отвечающ�
         new_row[0].text = 'Итого'
         new_row[1].text = str(total_per_aspect)
 
-    def make_achievement_tables(self, date):            # Создание таблиц достижений
-        aspects = self.database.get_data('''SELECT Name FROM Aspects''')
-        for i in aspects:
+    def make_achievement_tables(self, date):            # Функция отвечающая за создание таблиц достижений
+        aspects = self.database.send_request('''SELECT Name FROM Aspects''')
+        for i in aspects:                               # Все данные берутся из БД и из них формируетяс таблица.
             total_per_aspect = 0
             self.document.add_heading(i, 2)
-            data = self.database.get_data('''SELECT
+            data = self.database.send_request('''SELECT
                                                 Aspects.Name as AspectName,
                                                 Type.Name as Type,
                                                 Levels.Name as LevelName,
@@ -108,11 +100,11 @@ class CreateWordFile:                             # Класс отвечающ�
             new_row[0].text = 'Итого'
             new_row[1].text = str(total_per_aspect)
 
-    def make_final_table(self, link_on_table, dates):
+    def make_final_table(self, link_on_table, dates):       # Функция отвечающая за создание итоговой таблицы.
         table = self.document.add_table(rows=1, cols=link_on_table.columnCount())
-        table.style = 'TableGrid'
-        header_cells = table.rows[0].cells
-        for i in range(len(dates) + 1):
+        table.style = 'TableGrid'                           # link_on_table - ссылка на таблицу в основном окне
+        header_cells = table.rows[0].cells                  # оттуда берутся все данные, вместо того чтобы их считать
+        for i in range(len(dates) + 1):                     # снова.
             if i == 0:
                 header_cells[i].text = ''
             else:

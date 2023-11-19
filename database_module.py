@@ -69,9 +69,6 @@ class Database:
     def find_data(self, filter_column, filter_mask, date):                          # Фильтрация объектов
         _filter = 'AND ' + filter_column + ' LIKE ' + '\'' + filter_mask + '\''     # Составление фильтра
         return self.get_table(date, ACHIEVEMENT, filtration=_filter)
-                                                                                
-    def undo_changes(self):
-        pass
 
     def confirm_changes(self):
         self.connection.commit()

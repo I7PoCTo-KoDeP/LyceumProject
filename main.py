@@ -211,6 +211,7 @@ class AchievementControl(QMainWindow):
             self.database = database_module.Database(f_name)
             self.load_table()
             self.show_best_students()
+            self.docx = file_generator.CreateWordFile(self.database)
         except BaseException:
             self.statusbar.showMessage('Неподдерживаемый формат файла, пожалуйста, выберите другой.')
 

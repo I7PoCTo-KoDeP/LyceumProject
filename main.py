@@ -210,6 +210,7 @@ class AchievementControl(QMainWindow):
             f_name = QFileDialog.getOpenFileName(self, 'Выбрать путь к файлу', '', 'Таблицы (*.sqlite);;Все файлы (*)')[0]
             self.database = database_module.Database(f_name)
             self.load_table()
+            self.show_best_students()
         except BaseException:
             self.statusbar.showMessage('Неподдерживаемый формат файла, пожалуйста, выберите другой.')
 

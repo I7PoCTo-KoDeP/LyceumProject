@@ -16,13 +16,13 @@ class CreateWordFile:                             # Класс отвечающ�
             edu_sys = ['1 четверть', '2 четверть', '3 четверть', '4 четверть']
         number_of_class = self.database.send_request('''SELECT Num_of_class FROM Other_data''')[0][0]
         year = self.database.send_request('''SELECT Date FROM Other_data''')[0][0]
-        self.document.add_heading(f'Достижения {number_of_class} за 20{year}', 0)
+        self.document.add_heading(f'Достижения {number_of_class} за 20{year} учебный год', 0)
         for i in edu_sys:
             self.document.add_heading(f'Достижения за {i}', 1)
-            self.make_grades_table(i)                                   # Создание таблицы успеваемости.
-            self.make_achievement_tables(i)                             # Создание таблицы достижений.
-            self.document.add_page_break()                              # Разрыв страницы для более удобного чтения.
-        self.document.add_heading(f'Резултаты за {year}', 2)            # Добавление итоговой таблицы.
+            self.make_grades_table(i)                                       # Создание таблицы успеваемости.
+            self.make_achievement_tables(i)                                 # Создание таблицы достижений.
+            self.document.add_page_break()                                  # Разрыв страницы для более удобного чтения.
+        self.document.add_heading(f'Резултаты за {year} учебный год', 2)    # Добавление итоговой таблицы.
         self.make_final_table(link_on_table, edu_sys)
         self.document.add_heading(f'Итого: {self.total}', 1)
         self.document.save(f'Достижения_{number_of_class}.docx')

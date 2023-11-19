@@ -7,9 +7,9 @@ class Database:
         self.connection = sqlite3.connect(path)
         self.cursor = self.connection.cursor()
 
-    def get_table(self, date, aspect):
+    def get_table(self, date, aspect, filtration=''):                               # Получение таблицы.
         if aspect == ACHIEVEMENT:
-            return self.cursor.execute('''SELECT
+            return self.cursor.execute(f'''SELECT
                                                     Aspects.Name as AspectName,
                                                     Type.Name as Type,
                                                     Levels.Name as LevelName,
@@ -24,13 +24,13 @@ class Database:
                                                 LEFT JOIN Type ON MainTable.TypeId = Type.Id
                                                 LEFT JOIN Levels ON Type.LevelId = Levels.Id
                                                 LEFT JOIN Places ON Type.PlaceId = Places.Id
-                                                WHERE Date = ?
+                                                WHERE Date = ? {filtration}
                                                 ORDER BY AspectName;''', (date,)).fetchall()
         else:
             return self.cursor.execute('''SELECT AverageScore, PerfectStudents, GoodStudents FROM Grade
                                             WHERE Date = ?''', (date,)).fetchall()
 
-    def send_request(self, request, *args):
+    def send_request(self, request, *args):                                         # Отправление запроса СУБД.
         if args:
             return self.cursor.execute(request, *args).fetchall()
         return self.cursor.execute(request).fetchall()
@@ -46,7 +46,7 @@ class Database:
             self.cursor.execute('''INSERT INTO MainTable VALUES(?, ?, ?, ?, null, ?)''',
                                 (*aspect_id, other[0], other[1], *type_id, date)).fetchone()
 
-    def edit_data(self, aspect, date, *new_row):
+    def edit_data(self, aspect, date, *new_row):                                    # Изменение данных в ряду.
         if aspect == ACHIEVEMENT:
             ach_id, aspect_name, type_name, level, place_name, name, stud = new_row
             level_id = self.cursor.execute('''SELECT Id FROM Levels WHERE Name = ?''', (level,)).fetchone()
@@ -63,9 +63,13 @@ class Database:
                                 SET AverageScore = ?, PerfectStudents = ?, GoodStudents = ?
                                 WHERE Date = ?''', (avg, perf, good, date)).fetchall()
 
-    def delete_data(self, row_id):
+    def delete_data(self, row_id):                                                  # Удадение ряда данных.
         self.cursor.execute('''DELETE FROM MainTable WHERE id = ?''', (row_id,)).fetchall()
 
+    def find_data(self, filter_column, filter_mask, date):                          # Фильтрация объектов
+        _filter = 'AND ' + filter_column + ' LIKE ' + '\'' + filter_mask + '\''     # Составление фильтра
+        return self.get_table(date, ACHIEVEMENT, filtration=_filter)
+                                                                                
     def undo_changes(self):
         pass
 

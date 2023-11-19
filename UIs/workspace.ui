@@ -95,6 +95,32 @@
     </rect>
    </property>
   </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>573</y>
+     <width>841</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Добавить запись(Сначала описание, потом участники, разделитель описания и участников: &quot;;&quot;, а между участниками: &quot;,&quot;):</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="title">
+   <property name="geometry">
+    <rect>
+     <x>26</x>
+     <y>3</y>
+     <width>401</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>

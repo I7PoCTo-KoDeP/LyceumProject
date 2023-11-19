@@ -1,12 +1,12 @@
 import sys
-import database_script
+import database_module
 import file_generator
 import workspace
 import settings_menu
 from PyQt5 import uic
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QTableWidgetItem, QAction, QWidget, QMenu, QDialog,
-                             QListWidgetItem)
+                             QListWidgetItem, QFileDialog)
 from constants import *
 
 
@@ -14,7 +14,7 @@ class AchievementControl(QMainWindow):
     def __init__(self):
         super().__init__()
         self.roster = {}
-        self.database = database_script.Database(DATABASE_PATH)
+        self.database = database_module.Database(DATABASE_PATH)
         self.docx = file_generator.CreateWordFile(self.database)
         # Загрузка интерфейсов.
         uic.loadUi('UIs/cadet.ui', self)
@@ -26,6 +26,8 @@ class AchievementControl(QMainWindow):
         self.statusbar = self.statusBar()
         menubar = self.menuBar()
         # Действия.
+        open_action = QAction('&Открыть...', self)
+        open_action.triggered.connect(self.open_file)
         makefile_action = QAction('&Сгенерировать файл', self)
         makefile_action.triggered.connect(self.create_docx_file)
         settings_action = QAction('&Настройки', self)
@@ -43,8 +45,9 @@ class AchievementControl(QMainWindow):
         self.login()
         # Другие методы.
         info_menu.addAction(about_action)
-        file_menu.addAction(settings_action)
+        file_menu.addAction(open_action)
         file_menu.addAction(makefile_action)
+        file_menu.addAction(settings_action)
         workspace_menu.addMenu(self.learning_menu)
         workspace_menu.addMenu(self.achievement_menu)
         # Инициализация.
@@ -75,8 +78,9 @@ class AchievementControl(QMainWindow):
             self.learning_menu.addAction(learning_action)
             self.achievement_menu.addAction(achievement_action)
 
-    def login(self):                                                    # Выбор системы обучения.
-        data = self.database.send_request('''SELECT Class FROM Other_data''')
+    def login(self):                                                    # Выбор системы обучения и промежутка обучения.
+        data = self.database.send_request('''SELECT Class, Date FROM Other_data''')
+        self.title.setText(f'Результаты за {data[0][1]} учебный год:')
         if data[0][0] >= 10:
             self.half_year()
         else:
@@ -167,6 +171,8 @@ class AchievementControl(QMainWindow):
         return result
 
     def show_best_students(self):
+        self.listWidget.clear()
+        self.roster = {}
         learning = self.database.send_request('''SELECT * FROM Grade''')
         for i in learning:
             for j in i[1].split(', '):
@@ -180,7 +186,7 @@ class AchievementControl(QMainWindow):
                 else:
                     self.roster[j] += PER_GOOD_STUDENT
         achievements = self.database.send_request('''SELECT MainTable.Participants, Type.Points FROM MainTable
-                                              LEFT JOIN Type ON MainTable.TypeId = Type.Id''')
+                                                  LEFT JOIN Type ON MainTable.TypeId = Type.Id''')
         for i in achievements:
             for j in i[0].split(', '):
                 if j in self.roster:
@@ -192,16 +198,29 @@ class AchievementControl(QMainWindow):
             if j[0] != '':
                 self.listWidget.addItem(QListWidgetItem(j[0].ljust(15, ' ') + str(j[1])))
 
+    def sync(self):
+        self.load_table()
+        self.show_best_students()
+
     def create_docx_file(self):
         self.docx.docx_file_generator(self.n, self.tableWidget)
+
+    def open_file(self):
+        try:
+            f_name = QFileDialog.getOpenFileName(self, 'Выбрать путь к файлу', '', 'Таблицы (*.sqlite);;Все файлы (*)')[0]
+            self.database = database_module.Database(f_name)
+            self.load_table()
+        except BaseException:
+            self.statusbar.showMessage('Неподдерживаемый формат файла, пожалуйста, выберите другой.')
 
     def open_workspace(self):
         try:
             self.w_space = workspace.WorkspaceWindow(self.sender().text()[self.sender().text().find(' ') + 1:],
                                                      self.sender().data(), self.database)
             self.w_space.show()
+            self.w_space.sig.connect(self.sync)
         except BaseException as e:
-            self.statusbar.showMessage(str(e))
+            self.statusbar.showMessage('Непредвиденная ошибка: ' + str(e))
 
     def open_info(self):
         self.info_menu = Info()
@@ -223,7 +242,7 @@ class RegistrationWindow(QDialog):
         self.setFixedSize(270, 130)
 
     def save(self):
-        database = database_script.Database(DATABASE_PATH)
+        database = database_module.Database(DATABASE_PATH)
         database.send_request('''INSERT INTO Other_data VALUES(?, ?, ?)''',
                               (self.edu_year_edit.text(), int(self.class_edit.text()), self.platoon_edit.text()))
         database.confirm_changes()
@@ -240,7 +259,7 @@ class Info(QWidget):
 
 
 def registered():
-    database = database_script.Database(DATABASE_PATH)
+    database = database_module.Database(DATABASE_PATH)
     data = database.send_request('''SELECT * FROM Other_data''')
     if not data or data[0][0] is None:
         return False
@@ -251,11 +270,11 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     if not registered():
         login = RegistrationWindow()
-        if login.exec_() == QDialog.Accepted:
+        if login.exec() == QDialog.Accepted:
             ex = AchievementControl()
             ex.show()
-            sys.exit(app.exec_())
+            sys.exit(app.exec())
     else:
         ex = AchievementControl()
         ex.show()
-        sys.exit(app.exec_())
+        sys.exit(app.exec())

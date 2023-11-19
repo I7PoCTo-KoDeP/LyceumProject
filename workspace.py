@@ -1,10 +1,13 @@
 from PyQt5 import uic
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QMainWindow, QTableWidgetItem, QAction, QWidget, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QTableWidgetItem, QAction, QMessageBox, QDialog
 from constants import *
 
 
 class WorkspaceWindow(QMainWindow):
+    sig = pyqtSignal()
+
     def __init__(self, date, aspect, database):
         super().__init__()
         self.date = date
@@ -12,7 +15,7 @@ class WorkspaceWindow(QMainWindow):
         self.database = database
         self.is_changed = False
         self.updating = False
-        if aspect == LEARNING:
+        if aspect == LEARNING:                                                  # Выбор окна с таблицей.
             uic.loadUi('UIs/learning_workspace.ui', self)
             self.setWindowTitle('Успеваемость учащихся')
             self.setFixedSize(620, 390)
@@ -21,34 +24,38 @@ class WorkspaceWindow(QMainWindow):
             self.setWindowTitle('Достижения учащихся')
             self.setFixedSize(880, 700)
             self.initUI()
+        self.statusbar = self.statusBar()
         self.load_table(self.aspect)
         self.data_output.cellChanged.connect(self.change_data)
 
     def initUI(self):
         self.setWindowTitle(f'{self.date} - Рабочая область')
         menubar = self.menuBar()
-        self.statusbar = self.statusBar()
         # Действия.
         cancel_action = QAction('&Отменить', self)
-        cancel_action.triggered.connect(self.cancel_action)
+        cancel_action.triggered.connect(self.cancel_filter)
         find_action = QAction('&Найти', self)
         find_action.triggered.connect(self.open_find_window)
         delete_action = QAction('Удалить выбранную строку', self)
         delete_action.triggered.connect(self.delete_row)
         # Меню.
         redo_menu = menubar.addMenu('&Правка')
+        find_menu = menubar.addMenu('&Фильтры')
         # Другие методы.
-        redo_menu.addAction(find_action)
+        find_menu.addAction(find_action)
+        find_menu.addAction(cancel_action)
         redo_menu.addAction(delete_action)
-        redo_menu.addAction(cancel_action)
         self.add_button.clicked.connect(self.put_in_table)
         self.load_combo_boxes()
 
-    def load_table(self, aspect):                                           # Вывод таблицы.
+    def load_table(self, aspect, data=0):                                   # Вывод таблицы.
         num_of_students = 0                                                 # Также можно используется, как обновление
         total = 0                                                           # данных в таблице.
         points = 0
-        res = self.database.get_table(self.date, self.aspect)
+        if data == 0:
+            res = self.database.get_table(self.date, self.aspect)
+        else:
+            res = data
         self.updating = True
         self.data_output.setRowCount(0)
         if aspect == ACHIEVEMENT:
@@ -106,7 +113,6 @@ class WorkspaceWindow(QMainWindow):
         self.data_output.setItem(self.data_output.rowCount() - 1, 0, QTableWidgetItem('Итого'))
         self.data_output.setItem(self.data_output.rowCount() - 1, 1, QTableWidgetItem(str(int(total))))
         self.data_output.resizeColumnsToContents()
-        self.updating = False
         for i in range(self.data_output.rowCount()):
             if self.data_output.item(i, 0).text() == 'Спорт':
                 self.paint_table(i, QColor(120, 240, 120))
@@ -116,6 +122,7 @@ class WorkspaceWindow(QMainWindow):
                 self.paint_table(i, QColor(255, 184, 65))
             elif self.data_output.item(i, 0).text() == 'Активная жизненная позиция':
                 self.paint_table(i, QColor(240, 120, 120))
+        self.updating = False
 
     def paint_table(self, row, color):
         for i in range(self.data_output.columnCount()):
@@ -212,38 +219,54 @@ class WorkspaceWindow(QMainWindow):
         self.load_table(self.aspect)
         self.statusbar.showMessage('Ряд успешно удалён!')
 
-    def cancel_action(self):
-        if self.is_changed:
-            self.database.undo_changes()
-            self.load_table(self.aspect)
+    def cancel_filter(self):
+        self.load_table(ACHIEVEMENT)
 
     def save(self):
         self.is_changed = False
         self.database.confirm_changes()
 
     def open_find_window(self):
-        self.find_window = FindWindow(self.database)
-        self.find_window.show()
+        find_window = FindWindow(self.database, self.date)
+        find_window.show()
+        if find_window.exec() == QDialog.Accepted:
+            self.load_table(ACHIEVEMENT, data=find_window.output_data)
+            self.statusbar.showMessage('Вот, что найдено по Вашему запросу: ""')
 
     def closeEvent(self, event):
+        self.sig.emit()
         if self.is_changed:
             valid = QMessageBox.question(self, 'Сохранение', 'Сохранить изменения?', QMessageBox.Yes, QMessageBox.No)
             if valid == QMessageBox.Yes:
                 self.database.confirm_changes()
 
 
-class FindWindow(QWidget):
-    def __init__(self, database):
+class FindWindow(QDialog):                              # Класс отвечающий за поисковое окно.
+    def __init__(self, database, date):
         super().__init__()
         uic.loadUi('UIs/find.ui', self)
+        self.output_data = None
         self.database = database
-        self.setFixedSize(330, 120)
+        self.date = date
+        self.setFixedSize(280, 90)
         self.initUI()
+        self.find_button.clicked.connect(self.find_elem)
 
     def initUI(self):
-        # Загрузка ComboBox.
-        for i in FILTERS:
+        for i in FILTERS:                               # Загрузка ComboBoxes.
             self.filter_box.addItem(i)
+        for i in self.database.send_request('''SELECT name FROM Aspects'''):
+            self.filter_mask.addItem(*i)
+        self.filter_edit.setVisible(False)
+        self.filter_box.textActivated.connect(self.filter_edits)
+
+    def filter_edits(self, text):
+        self.filter_mask.setVisible(text == 'По сфере')
+        self.filter_edit.setVisible(not text == 'По сфере')
 
     def find_elem(self):
-        pass
+        if self.filter_box.currentText() == 'По сфере':
+            self.output_data = self.database.find_data('AspectName', self.filter_mask.currentText(), self.date)
+        else:
+            self.output_data = self.database.find_data('Participants', self.filter_edit.text() + '%', self.date)
+        self.accept()

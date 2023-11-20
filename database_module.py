@@ -1,5 +1,13 @@
 import sqlite3
-from constants import ACHIEVEMENT
+from constants import ACHIEVEMENT, DATABASE_PATH
+
+
+def database_connection():
+    with open('data/settings_file.txt', mode='r', encoding='utf-8') as f:
+        path = f.read()
+    if path == '':
+        return Database(DATABASE_PATH)
+    return Database(path)
 
 
 class Database:

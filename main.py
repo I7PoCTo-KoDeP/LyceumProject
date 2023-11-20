@@ -13,8 +13,8 @@ from constants import *
 class AchievementControl(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.database = database_module.database_connection()
         self.roster = {}
-        self.database = database_module.Database(DATABASE_PATH)
         self.docx = file_generator.CreateWordFile(self.database)
         # Загрузка интерфейсов.
         uic.loadUi('UIs/cadet.ui', self)
@@ -25,6 +25,7 @@ class AchievementControl(QMainWindow):
     def initUI(self):
         self.statusbar = self.statusBar()
         menubar = self.menuBar()
+        menubar.clear()
         # Действия.
         open_action = QAction('&Открыть...', self)
         open_action.triggered.connect(self.open_file)
@@ -47,6 +48,7 @@ class AchievementControl(QMainWindow):
         info_menu.addAction(about_action)
         file_menu.addAction(open_action)
         file_menu.addAction(makefile_action)
+        file_menu.addSeparator()
         file_menu.addAction(settings_action)
         workspace_menu.addMenu(self.learning_menu)
         workspace_menu.addMenu(self.achievement_menu)
@@ -207,7 +209,10 @@ class AchievementControl(QMainWindow):
 
     def open_file(self):
         try:
-            f_name = QFileDialog.getOpenFileName(self, 'Выбрать путь к файлу', '', 'Таблицы (*.sqlite);;Все файлы (*)')[0]
+            f_name = QFileDialog.getOpenFileName(self, 'Выбрать путь к файлу', '',
+                                                 'Таблицы (*.sqlite);;Все файлы (*)')[0]
+            if f_name == '':
+                return
             self.database = database_module.Database(f_name)
             self.load_table()
             self.show_best_students()
@@ -231,6 +236,7 @@ class AchievementControl(QMainWindow):
     def open_settings(self):
         self.settings = settings_menu.SettingsMenu(self.database)
         self.settings.show()
+        self.settings.sig.connect(self.initUI)
 
     def closeEvent(self, event):
         self.database.close_connection()
@@ -244,7 +250,7 @@ class RegistrationWindow(QDialog):
         self.setFixedSize(270, 130)
 
     def save(self):
-        database = database_module.Database(DATABASE_PATH)
+        database = database_module.database_connection()
         database.send_request('''INSERT INTO Other_data VALUES(?, ?, ?)''',
                               (self.edu_year_edit.text(), int(self.class_edit.text()), self.platoon_edit.text()))
         database.confirm_changes()
@@ -261,7 +267,7 @@ class Info(QWidget):
 
 
 def registered():
-    database = database_module.Database(DATABASE_PATH)
+    database = database_module.database_connection()
     data = database.send_request('''SELECT * FROM Other_data''')
     if not data or data[0][0] is None:
         return False

@@ -1,11 +1,15 @@
 from PyQt5 import uic
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QTableWidgetItem, QWidget, QFileDialog, QMessageBox
 from constants import SETTINGS_HEADER
 
 
 class SettingsMenu(QWidget):
+    sig = pyqtSignal()
+
     def __init__(self, database):
         super().__init__()
+        self.isChanged = False
         self.database = database
         uic.loadUi('UIs/settings_menu.ui', self)
         self.setWindowTitle('Настройки')
@@ -24,6 +28,10 @@ class SettingsMenu(QWidget):
         self.close_button.clicked.connect(self.close)
         self.save_button.clicked.connect(self.save)
         self.path_button.clicked.connect(self.file_path)
+
+        self.class_edit.textChanged.connect(self.line_edit_changed)
+        self.num_of_class_edit.textChanged.connect(self.line_edit_changed)
+        self.edu_years_edit.textChanged.connect(self.line_edit_changed)
 
     def load_points_table(self):
         res = self.database.send_request('''SELECT
@@ -49,6 +57,7 @@ class SettingsMenu(QWidget):
         self.tableWidget.resizeColumnsToContents()
 
     def save(self):                                 # Сохранение изменений настроек приложения и данных в БД.
+        self.isChanged = False
         with open('data/settings_file.txt', mode='w', encoding='utf-8') as f:
             f.seek(0)
             f.write(self.file_path_edit.text())
@@ -59,10 +68,12 @@ class SettingsMenu(QWidget):
         self.close()
 
     def file_path(self):                            # Выбор пути к БД.
+        self.isChanged = True
         f_name = QFileDialog.getOpenFileName(self, 'Выбрать путь к файлу', '', 'Таблицы (*.sqlite);;Все файлы (*)')[0]
         self.file_path_edit.setText(f_name)
 
     def change_scoring(self, row):
+        self.isChanged = True
         aspect = self.tableWidget.item(row, 0).text()
         name = self.tableWidget.item(row, 1).text()
         level = self.tableWidget.item(row, 2).text()
@@ -73,7 +84,12 @@ class SettingsMenu(QWidget):
                                    PlaceId=(SELECT Id FROM Places WHERE Name = ?)''',
                                    (value, aspect, name, level, place))
 
+    def line_edit_changed(self):
+        self.isChanged = True
+
     def closeEvent(self, event):
-        valid = QMessageBox.question(self, 'Сохранение', 'Сохранить изменения?', QMessageBox.Yes, QMessageBox.No)
-        if valid == QMessageBox.Yes:
-            self.save()
+        self.sig.emit()
+        if self.isChanged:
+            valid = QMessageBox.question(self, 'Сохранение', 'Сохранить изменения?', QMessageBox.Yes, QMessageBox.No)
+            if valid == QMessageBox.Yes:
+                self.save()

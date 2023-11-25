@@ -16,11 +16,11 @@ class WorkspaceWindow(QMainWindow):
         self.is_changed = False
         self.updating = False
         if aspect == LEARNING:                                                  # Выбор окна с таблицей.
-            uic.loadUi('UIs/learning_workspace.ui', self)
+            uic.loadUi('appdata/UIs/learning_workspace.ui', self)
             self.setWindowTitle('Успеваемость учащихся')
             self.setFixedSize(620, 390)
         else:
-            uic.loadUi('UIs/workspace.ui', self)
+            uic.loadUi('appdata/UIs/workspace.ui', self)
             self.setWindowTitle('Достижения учащихся')
             self.setFixedSize(880, 700)
             self.initUI()
@@ -244,7 +244,7 @@ class WorkspaceWindow(QMainWindow):
 class FindWindow(QDialog):                              # Класс отвечающий за поисковое окно.
     def __init__(self, database, date):
         super().__init__()
-        uic.loadUi('UIs/find.ui', self)
+        uic.loadUi('appdata/UIs/find.ui', self)
         self.output_data = None
         self.database = database
         self.date = date

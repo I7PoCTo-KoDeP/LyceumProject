@@ -11,7 +11,7 @@ class SettingsMenu(QWidget):
         super().__init__()
         self.isChanged = False
         self.database = database
-        uic.loadUi('UIs/settings_menu.ui', self)
+        uic.loadUi('appdata/UIs/settings_menu.ui', self)
         self.setWindowTitle('Настройки')
         self.setFixedSize(520, 440)
         self.initUI()
@@ -21,7 +21,7 @@ class SettingsMenu(QWidget):
         self.class_edit.setText(str(data[1]))
         self.num_of_class_edit.setText(data[2])
         self.edu_years_edit.setText(data[0])
-        with open('data/settings_file.txt', mode='r', encoding='utf-8') as f:
+        with open('appdata/settings_file.txt', mode='r', encoding='utf-8') as f:
             path = f.read()
             self.file_path_edit.setText(path)
         self.load_points_table()
@@ -58,7 +58,7 @@ class SettingsMenu(QWidget):
 
     def save(self):                                 # Сохранение изменений настроек приложения и данных в БД.
         self.isChanged = False
-        with open('data/settings_file.txt', mode='w', encoding='utf-8') as f:
+        with open('appdata/settings_file.txt', mode='w', encoding='utf-8') as f:
             f.seek(0)
             f.write(self.file_path_edit.text())
         self.database.send_request('''UPDATE Other_data SET class = ?, num_of_class = ?, date = ?''',
@@ -68,9 +68,10 @@ class SettingsMenu(QWidget):
         self.close()
 
     def file_path(self):                            # Выбор пути к БД.
-        self.isChanged = True
         f_name = QFileDialog.getOpenFileName(self, 'Выбрать путь к файлу', '', 'Таблицы (*.sqlite);;Все файлы (*)')[0]
-        self.file_path_edit.setText(f_name)
+        if f_name != '':
+            self.isChanged = True
+            self.file_path_edit.setText(f_name)
 
     def change_scoring(self, row):
         self.isChanged = True

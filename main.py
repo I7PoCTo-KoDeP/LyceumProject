@@ -4,9 +4,9 @@ import file_generator
 import workspace
 import settings_menu
 from PyQt5 import uic
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QPixmap
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QTableWidgetItem, QAction, QWidget, QMenu, QDialog,
-                             QListWidgetItem, QFileDialog)
+                             QListWidgetItem, QFileDialog, QLabel)
 from constants import *
 
 
@@ -17,7 +17,7 @@ class AchievementControl(QMainWindow):
         self.roster = {}
         self.docx = file_generator.CreateWordFile(self.database)
         # Загрузка интерфейсов.
-        uic.loadUi('UIs/cadet.ui', self)
+        uic.loadUi('appdata/UIs/cadet.ui', self)
         self.setWindowTitle('Система учёта достижений кадет')
         self.setFixedSize(800, 470)
         self.initUI()
@@ -214,6 +214,11 @@ class AchievementControl(QMainWindow):
             if f_name == '':
                 return
             self.database = database_module.Database(f_name)
+            if not registered(self.database):
+                register = RegistrationWindow(self.database)
+                register.show()
+                if register.exec() == QDialog.Accepted:
+                    pass
             self.load_table()
             self.show_best_students()
             self.docx = file_generator.CreateWordFile(self.database)
@@ -243,31 +248,37 @@ class AchievementControl(QMainWindow):
 
 
 class RegistrationWindow(QDialog):
-    def __init__(self):
+    def __init__(self, database=database_module.database_connection()):
         super().__init__()
-        uic.loadUi('UIs/register.ui', self)
+        uic.loadUi('appdata/UIs/register.ui', self)
+        self.database = database
         self.save_button.clicked.connect(self.save)
         self.setFixedSize(270, 130)
 
     def save(self):
-        database = database_module.database_connection()
-        database.send_request('''INSERT INTO Other_data VALUES(?, ?, ?)''',
-                              (self.edu_year_edit.text(), int(self.class_edit.text()), self.platoon_edit.text()))
-        database.confirm_changes()
+        self.database.send_request('''INSERT INTO Other_data VALUES(?, ?, ?)''',
+                                   (self.edu_year_edit.text(), int(self.class_edit.text()), self.platoon_edit.text()))
+        self.database.confirm_changes()
         self.accept()
 
 
 class Info(QWidget):
     def __init__(self):
         super().__init__()
-        uic.loadUi('UIs/Info.ui', self)
+        uic.loadUi('appdata/UIs/Info.ui', self)
         self.setWindowTitle('Информация о приложении')
         self.setFixedSize(460, 380)
         self.close_button.clicked.connect(self.close)
+        self.pixmap = QPixmap('appdata/image.jpg')
+        self.image = QLabel(self)
+        self.image.move(20, 180)
+        self.image.resize(50, 60)
+        self.image.setPixmap(self.pixmap)
+        self.image.setScaledContents(True)
 
 
-def registered():
-    database = database_module.database_connection()
+def registered(connection=database_module.database_connection()):
+    database = connection
     data = database.send_request('''SELECT * FROM Other_data''')
     if not data or data[0][0] is None:
         return False
